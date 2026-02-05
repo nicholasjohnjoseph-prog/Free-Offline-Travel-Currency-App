@@ -1,6 +1,6 @@
-# Global Travel Currency Pro 🌐
+# Global Travel Currency Pro 🔥
 
-A high-precision currency converter built for international travel.
+A high-precision currency converter built for international travel and emergencies. 
 
 ### Features
 * **Live Market Rates:** Connects via REST API for real-time data.
