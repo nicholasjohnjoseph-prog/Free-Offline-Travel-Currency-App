@@ -8,17 +8,19 @@
         :root { --primary: #6366f1; --bg: #0f172a; --card: #1e293b; --text: #f8fafc; --input-bg: #334155; }
         body { font-family: -apple-system, system-ui, sans-serif; background: var(--bg); color: var(--text); display: flex; justify-content: center; padding: 20px; margin: 0; }
         .card { background: var(--card); padding: 24px; border-radius: 24px; box-shadow: 0 20px 50px rgba(0,0,0,0.3); width: 100%; max-width: 400px; }
-        h2 { margin-top: 0; font-size: 22px; color: var(--primary); }
+        h2 { margin-top: 0; font-size: 22px; color: var(--primary); text-align: center; }
         .form-group { margin-bottom: 20px; position: relative; }
         label { display: block; margin-bottom: 8px; font-size: 11px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; }
-        input, select { width: 100%; padding: 14px; border: 1px solid #475569; background: var(--input-bg); color: white; border-radius: 12px; font-size: 16px; box-sizing: border-box; outline: none; }
-        input:focus { border-color: var(--primary); }
-        #searchBar { margin-bottom: 5px; border-bottom-left-radius: 0; border-bottom-right-radius: 0; border-bottom: none; background: #1e293b; }
-        #currencyList { border-top-left-radius: 0; border-top-right-radius: 0; height: 180px; }
-        .result-box { margin-top: 24px; padding: 24px; background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); border-radius: 20px; text-align: center; }
-        .usd-val { font-size: 42px; font-weight: 800; }
+        input, select { width: 100%; padding: 14px; border: 1px solid #475569; background: var(--input-bg); color: white; border-radius: 12px; font-size: 16px; box-sizing: border-box; outline: none; transition: 0.2s; }
+        input:focus { border-color: var(--primary); box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.2); }
+        #searchBar { margin-bottom: 5px; border-bottom-left-radius: 0; border-bottom-right-radius: 0; border-bottom: 1px solid #1e293b; background: #1e293b; }
+        #currencyList { border-top-left-radius: 0; border-top-right-radius: 0; height: 180px; cursor: pointer; }
+        .result-box { margin-top: 24px; padding: 24px; background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); border-radius: 20px; text-align: center; box-shadow: 0 10px 20px rgba(79, 70, 229, 0.3); }
+        .usd-val { font-size: 42px; font-weight: 800; letter-spacing: -1px; }
+        .fee-label { font-size: 12px; font-weight: 600; opacity: 0.9; }
         .status { font-size: 11px; text-align: center; margin-top: 15px; color: #64748b; }
-        .btn-clear { background: #ef4444; color: white; border: none; padding: 8px 15px; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer; float: right; margin-top: -35px; }
+        .btn-clear { background: #ef4444; color: white; border: none; padding: 8px 15px; border-radius: 8px; font-size: 10px; font-weight: 700; cursor: pointer; float: right; margin-top: -35px; position: relative; z-index: 10; }
+        option { padding: 10px; }
     </style>
 </head>
 <body>
@@ -27,58 +29,66 @@
     <h2>Global Live Converter 🌐</h2>
     
     <div class="form-group">
-        <label>Find Currency</label>
-        <input type="text" id="searchBar" placeholder="Search 161 currencies..." oninput="renderList()">
+        <label>Step 1: Select Country</label>
+        <input type="text" id="searchBar" placeholder="Type Country (e.g. India, Japan)..." oninput="renderList()">
         <select id="currencyList" size="5" onchange="convert()"></select>
     </div>
 
     <div class="form-group">
-        <label>Local Price</label>
-        <button class="btn-clear" onclick="clearInput()">Clear</button>
+        <label>Step 2: Local Price</label>
+        <button class="btn-clear" onclick="clearInput()">RESET</button>
         <input type="number" id="localPrice" placeholder="0.00" oninput="convert()" inputmode="decimal">
     </div>
 
     <div class="form-group">
-        <label>Bank Fee %</label>
+        <label>Step 3: Bank Fee %</label>
         <input type="number" id="fee" value="3" oninput="convert()" inputmode="numeric">
     </div>
 
     <div class="result-box">
         <div class="usd-val" id="totalUSD">$0.00</div>
-        <div class="fee-label" style="font-size: 12px; font-weight: 500;">TOTAL USD OUTFLOW</div>
+        <div class="fee-label">TOTAL USD OUTFLOW</div>
     </div>
 
-    <div id="updateStatus" class="status">Connecting to 161 world currencies...</div>
+    <div id="updateStatus" class="status">Syncing 161 global rates...</div>
 </div>
 
 <script>
+    // YOUR API KEY (Keep whitelisted on your API dashboard)
     const API_KEY = '96e49f1454195e418c84e5f6'; 
+    
     let rates = {};
-    let currencyNames = {}; // We will fill this from the API
+    let currencyNames = {};
+
+    // Helper to generate flag from code
+    function getFlag(code) {
+        if (code === 'EUR') return '🇪🇺';
+        return code.toUpperCase().replace(/./g, char => 
+            String.fromCodePoint(char.charCodeAt(0) + 127397)
+        );
+    }
 
     async function initApp() {
         try {
-            // 1. Fetch the official list of ALL 161 currency codes and names
-            const codesResponse = await fetch(`https://v6.exchangerate-api.com/v6/${API_KEY}/codes`);
-            const codesData = await codesResponse.json();
-            
+            // Fetch Names
+            const codesRes = await fetch(`https://v6.exchangerate-api.com/v6/${API_KEY}/codes`);
+            const codesData = await codesRes.json();
             if (codesData.result === "success") {
                 codesData.supported_codes.forEach(pair => {
                     currencyNames[pair[0]] = pair[1];
                 });
             }
 
-            // 2. Fetch the actual exchange rates
-            const ratesResponse = await fetch(`https://v6.exchangerate-api.com/v6/${API_KEY}/latest/USD`);
-            const ratesData = await ratesResponse.json();
-            
+            // Fetch Rates
+            const ratesRes = await fetch(`https://v6.exchangerate-api.com/v6/${API_KEY}/latest/USD`);
+            const ratesData = await ratesRes.json();
             if (ratesData.result === "success") {
                 rates = ratesData.conversion_rates;
-                document.getElementById('updateStatus').innerText = "161 Currencies Live & Synced";
+                document.getElementById('updateStatus').innerText = "✅ 161 Countries Live";
                 renderList();
             }
         } catch (error) {
-            document.getElementById('updateStatus').innerText = "Error. Check API key or Connection.";
+            document.getElementById('updateStatus').innerText = "❌ Offline Mode";
             console.error(error);
         }
     }
@@ -86,19 +96,22 @@
     function renderList() {
         const select = document.getElementById('currencyList');
         const search = document.getElementById('searchBar').value.toLowerCase();
-        const currentSelection = select.value || "INR"; // Default to India
+        const currentSelection = select.value || "INR"; 
         
         select.innerHTML = "";
         
-        // Sort and filter all 161 currencies
-        Object.keys(rates).sort().forEach(code => {
+        const sortedCodes = Object.keys(rates).sort();
+
+        sortedCodes.forEach(code => {
             const name = currencyNames[code] || "";
-            const displayText = `${code} - ${name}`;
+            const flag = getFlag(code.substring(0, 2));
+            const displayText = `${name} (${code})`;
             
-            if (displayText.toLowerCase().includes(search)) {
+            // Search logic: checks code, country name, and full display text
+            if (displayText.toLowerCase().includes(search) || code.toLowerCase().includes(search)) {
                 const option = document.createElement('option');
                 option.value = code;
-                option.innerText = displayText;
+                option.innerText = `${flag} ${displayText}`;
                 if (code === currentSelection) option.selected = true;
                 select.appendChild(option);
             }
@@ -108,7 +121,8 @@
 
     function clearInput() {
         document.getElementById('localPrice').value = "";
-        convert();
+        document.getElementById('searchBar').value = "";
+        renderList();
     }
 
     function convert() {
@@ -126,7 +140,6 @@
         }
     }
 
-    // Run everything
     initApp();
 </script>
 
