@@ -5,7 +5,7 @@ A high-precision currency converter built for international travel and emergenci
 ### Features
 * **Live Market Rates:** Connects via REST API for real-time data.
 * **Bank Fee Logic:** Calculates the true cost including international transaction fees.
-* **Searchable UI:** Quick-filter 160+ global currencies.
+* **Searchable UI:** Quick-filter 150+ global currencies.
 * **Offline Fallback:** Works in airplane mode with cached data.
 
 ### Tech Stack
