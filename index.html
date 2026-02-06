@@ -1,9 +1,94 @@
-<!DOCTYPE html>
-<html>
-<body>
-  <h1 style="color: white; background: #0f172a; padding: 20px;">Testing App Load...</h1>
-  <script>
-    alert("If you see this, your script is running!");
-  </script>
-</body>
-</html>
+<script>
+    const API_KEY = '96e49f1454195e418c84e5f6'; 
+    
+    // Default rates
+    let rates = { "USD": 1, "EUR": 0.92, "GBP": 0.79, "JPY": 151.45, "MXN": 17.05, "CAD": 1.35, "AUD": 1.52, "INR": 82.90 };
+
+    // Mapping codes to Country/Currency names
+    const currencyNames = {
+        "USD": "United States Dollar",
+        "EUR": "Euro (Europe)",
+        "GBP": "British Pound",
+        "INR": "Indian Rupee",
+        "JPY": "Japanese Yen",
+        "CAD": "Canadian Dollar",
+        "AUD": "Australian Dollar",
+        "MXN": "Mexican Peso",
+        "AED": "UAE Dirham",
+        "THB": "Thai Baht",
+        "SGD": "Singapore Dollar",
+        "CHF": "Swiss Franc",
+        "CNY": "Chinese Yuan",
+        "ZAR": "South African Rand"
+    };
+
+    async function fetchRates() {
+        try {
+            const response = await fetch(`https://v6.exchangerate-api.com/v6/${API_KEY}/latest/USD`);
+            const data = await response.json();
+            
+            if (data.result === "success") {
+                rates = data.conversion_rates;
+                populateCurrencyList();
+                document.getElementById('updateStatus').innerText = "Live Rates Synced Successfully";
+            } else {
+                throw new Error(data['error-type'] || "API Key Error");
+            }
+        } catch (error) {
+            populateCurrencyList();
+            document.getElementById('updateStatus').innerText = "Network Error: Using Demo Rates";
+        }
+    }
+
+    function populateCurrencyList(filter = "") {
+        const select = document.getElementById('currencyList');
+        const currentSelection = select.value;
+        select.innerHTML = "";
+        
+        const codes = Object.keys(rates).sort();
+        const filteredCodes = codes.filter(code => {
+            const fullName = currencyNames[code] || "";
+            return code.toLowerCase().includes(filter.toLowerCase()) || 
+                   fullName.toLowerCase().includes(filter.toLowerCase());
+        });
+
+        filteredCodes.forEach(code => {
+            const option = document.createElement('option');
+            option.value = code;
+            // This line adds the Country Name next to the code
+            const name = currencyNames[code] ? ` - ${currencyNames[code]}` : "";
+            option.innerText = `${code}${name}`;
+            
+            if (code === currentSelection || (code === "INR" && !currentSelection)) option.selected = true;
+            select.appendChild(option);
+        });
+        convert();
+    }
+
+    function filterCurrencies() {
+        const searchTerm = document.getElementById('searchBar').value;
+        populateCurrencyList(searchTerm);
+    }
+
+    function clearInput() {
+        document.getElementById('localPrice').value = "";
+        convert();
+    }
+
+    function convert() {
+        const localAmount = parseFloat(document.getElementById('localPrice').value) || 0;
+        const currencyCode = document.getElementById('currencyList').value;
+        const feePercent = parseFloat(document.getElementById('fee').value) || 0;
+
+        if (rates[currencyCode]) {
+            const baseUSD = localAmount / rates[currencyCode];
+            const totalUSD = baseUSD * (1 + (feePercent / 100));
+            document.getElementById('totalUSD').innerText = '$' + totalUSD.toLocaleString(undefined, {
+                minimumFractionDigits: 2, 
+                maximumFractionDigits: 2
+            });
+        }
+    }
+
+    fetchRates();
+</script>
