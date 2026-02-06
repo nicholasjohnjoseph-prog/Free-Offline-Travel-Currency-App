@@ -98,4 +98,40 @@
 
     function renderList() {
         const select = document.getElementById('currencyList');
-        const search = document.getElementById('searchBar').value
+        const search = document.getElementById('searchBar').value.toLowerCase();
+        const current = select.value || "INR";
+        select.innerHTML = "";
+        
+        Object.keys(rates).sort().forEach(code => {
+            const name = currencyNames[code] || "";
+            if (`${name} ${code}`.toLowerCase().includes(search)) {
+                const opt = document.createElement('option');
+                opt.value = code;
+                opt.innerText = `${name} (${code})`;
+                if (code === current) opt.selected = true;
+                select.appendChild(opt);
+            }
+        });
+        convert();
+    }
+
+    function convert() {
+        const price = parseFloat(document.getElementById('localPrice').value) || 0;
+        const code = document.getElementById('currencyList').value;
+        const fee = parseFloat(document.getElementById('fee').value) || 0;
+        if (rates[code]) {
+            const total = (price / rates[code]) * (1 + fee/100);
+            document.getElementById('totalUSD').innerText = '$' + total.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        }
+    }
+
+    function clearInput() {
+        document.getElementById('localPrice').value = "";
+        document.getElementById('searchBar').value = "";
+        renderList();
+    }
+
+    initApp();
+</script>
+</body>
+</html>
